@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Task and Assignment Manager</title>
+<style>
+  :root{
+    --navy:#1B2A4E; --navy-deep:#101B33; --paper:#F7F5EF; --paper-line:#E4DFD2;
+    --ink:#2A2A28; --ink-soft:#6B6A63; --accent:#3B5BA9;
+    --priority-high:#B5502E; --priority-medium:#C9922A; --priority-low:#4C7A57;
+    --status-done:#4C7A57; --status-pending:#8A8577;
+    --serif:'Lora',Georgia,'Times New Roman',serif;
+    --sans:'Inter',-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;font-family:var(--sans);background:var(--paper);color:var(--ink);}
+
+  /* ---------- Login ---------- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,var(--navy-deep),var(--navy));padding:24px;}
+  .login-card{background:var(--paper);width:100%;max-width:420px;padding:36px 34px;border-radius:2px;box-shadow:0 20px 50px rgba(0,0,0,.35);}
+  .login-card h1{font-family:var(--serif);font-size:1.5rem;margin:0 0 4px;color:var(--navy);line-height:1.25;}
+  .login-card p.tag{margin:0 0 20px;color:var(--ink-soft);font-size:.92rem;}
+  .auth-tabs{display:flex;margin-bottom:18px;border-bottom:1px solid var(--paper-line);}
+  .auth-tab{flex:1;text-align:center;padding:9px;cursor:pointer;font-size:.88rem;color:var(--ink-soft);border-bottom:2px solid transparent;}
+  .auth-tab.active{color:var(--navy);border-bottom-color:var(--navy);font-weight:600;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:.78rem;color:var(--ink-soft);margin-bottom:6px;}
+  .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--paper-line);border-radius:3px;
+    font-size:.92rem;font-family:var(--sans);background:#fff;color:var(--ink);}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .field textarea{resize:vertical;min-height:70px;}
+  .btn-primary{width:100%;padding:12px;margin-top:6px;border:none;border-radius:3px;background:var(--navy);color:#fff;font-size:.95rem;cursor:pointer;font-family:var(--sans);}
+  .btn-primary:hover{background:var(--navy-deep);}
+  .auth-msg{margin-top:12px;font-size:.82rem;color:var(--priority-high);min-height:1.1em;}
+  .login-hint{margin-top:14px;font-size:.76rem;color:var(--ink-soft);line-height:1.6;background:#fff;border:1px dashed var(--paper-line);padding:10px 12px;}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;}
+  .main-shell{display:flex;min-height:100vh;}
+  .sidebar{width:230px;background:var(--navy);color:#EDEBE3;padding:26px 20px;flex-shrink:0;}
+  .sidebar h2{font-family:var(--serif);font-size:1.05rem;margin:0 0 2px;line-height:1.3;}
+  .sidebar .role-tag{font-size:.74rem;color:#B9C3DC;margin-bottom:28px;word-break:break-word;}
+  .nav-item{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;margin-bottom:4px;border-radius:3px;color:#D8DCEA;cursor:pointer;font-size:.88rem;border-left:3px solid transparent;}
+  .nav-item:hover{background:rgba(255,255,255,.06);}
+  .nav-item.active{background:rgba(255,255,255,.1);border-left-color:var(--accent);color:#fff;}
+  .nav-badge{background:var(--priority-high);color:#fff;font-size:.68rem;border-radius:20px;padding:1px 7px;}
+  .nav-sep{height:1px;background:rgba(255,255,255,.14);margin:16px 0;}
+  .logout-link{margin-top:24px;font-size:.8rem;color:#9FA8C0;cursor:pointer;}
+  .logout-link:hover{color:#fff;}
+  .main{flex:1;padding:32px 40px;max-width:1000px;min-width:0;}
+  header.page-head{margin-bottom:20px;}
+  header.page-head h1{font-family:var(--serif);font-size:1.5rem;margin:0 0 4px;color:var(--navy);}
+  header.page-head p{margin:0;color:var(--ink-soft);font-size:.9rem;}
+
+  /* ---------- Notifications ---------- */
+  #notifyStack{margin-bottom:18px;}
+  .notify{background:#FBF1E7;border:1px solid #E9CFA8;border-left:4px solid var(--priority-medium);padding:10px 14px;border-radius:3px;font-size:.85rem;margin-bottom:8px;}
+  .notify.urgent{background:#FBEAE3;border-color:#E0AF9B;border-left-color:var(--priority-high);}
+  .notify.info{background:#E7ECF6;border-color:#C5D0E8;border-left-color:var(--accent);}
+  .notify b{color:var(--navy);}
+
+  /* ---------- Stats ---------- */
+  .stats{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+  .stat{background:#fff;border:1px solid var(--paper-line);padding:12px 16px;min-width:110px;flex:1;}
+  .stat .num{font-family:var(--serif);font-size:1.5rem;color:var(--navy);}
+  .stat .lbl{font-size:.74rem;color:var(--ink-soft);}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .toolbar select,.toolbar input{padding:7px 10px;border:1px solid var(--paper-line);border-radius:3px;background:#fff;font-size:.82rem;color:var(--ink);font-family:var(--sans);}
+  .toolbar input{min-width:200px;}
+  .btn-outline{padding:7px 14px;border:1px solid var(--navy);color:var(--navy);background:transparent;border-radius:3px;cursor:pointer;font-size:.82rem;font-family:var(--sans);}
+  .btn-outline:hover{background:var(--navy);color:#fff;}
+  .btn-danger{border-color:var(--priority-high);color:var(--priority-high);}
+  .btn-danger:hover{background:var(--priority-high);color:#fff;}
+  .btn-fill{padding:8px 16px;border:none;background:var(--navy);color:#fff;border-radius:3px;cursor:pointer;font-size:.85rem;font-family:var(--sans);}
+  .btn-fill:hover{background:var(--navy-deep);}
+
+  /* ---------- Table ---------- */
+  .table-wrap{overflow-x:auto;}
+  .ledger{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--paper-line);}
+  .ledger th{text-align:left;font-size:.72rem;color:var(--ink-soft);font-weight:600;padding:10px 12px;border-bottom:2px solid var(--navy);white-space:nowrap;}
+  .ledger td{padding:12px;border-bottom:1px solid var(--paper-line);font-size:.86rem;vertical-align:top;}
+  .ledger tr:last-child td{border-bottom:none;}
+  .task-title{color:var(--navy);font-weight:600;}
+  .task-desc{color:var(--ink-soft);font-size:.78rem;margin-top:2px;}
+  .actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600;}
+  .pill-high{background:#FBEAE3;color:var(--priority-high);}
+  .pill-medium{background:#FBF1E1;color:var(--priority-medium);}
+  .pill-low{background:#E9F2EC;color:var(--priority-low);}
+  .pill-reviewed{background:#E9F2EC;color:var(--status-done);}
+  .pill-pending{background:#EFEEE9;color:var(--status-pending);}
+  .pill-submitted{background:#E7ECF6;color:var(--accent);}
+  .pill-overdue{background:#FBEAE3;color:var(--priority-high);}
+  .pill-late{background:#FBF1E1;color:var(--priority-medium);margin-left:6px;}
+  .empty-state{padding:36px 20px;text-align:center;color:var(--ink-soft);font-size:.88rem;}
+
+  /* ---------- Forms/panels ---------- */
+  .form-card{background:#fff;border:1px solid var(--paper-line);padding:22px;max-width:560px;}
+  .form-row{display:flex;gap:14px;}
+  .form-row .field{flex:1;}
+  .panel{background:#fff;border:1px solid var(--paper-line);padding:18px;margin-bottom:16px;}
+  .panel h3{margin:0 0 4px;font-size:1rem;color:var(--navy);}
+  .meta{font-size:.8rem;color:var(--ink-soft);margin:0 0 12px;}
+  .sub-card{border-top:1px solid var(--paper-line);padding:12px 0;}
+  .sub-card .who{font-weight:600;color:var(--navy);font-size:.9rem;}
+  .sub-note{font-size:.82rem;color:var(--ink);background:var(--paper);padding:8px 10px;margin:8px 0;border-left:3px solid var(--paper-line);white-space:pre-wrap;}
+  .missing{font-size:.8rem;color:var(--ink-soft);border-top:1px solid var(--paper-line);padding-top:10px;margin:8px 0 0;}
+  a.file-link{color:var(--accent);font-size:.82rem;}
+
+  /* ---------- Modal ---------- */
+  #modalRoot{display:none;position:fixed;inset:0;background:rgba(16,27,51,.55);z-index:50;align-items:center;justify-content:center;padding:20px;}
+  .modal{background:var(--paper);width:100%;max-width:480px;padding:24px;border-radius:2px;max-height:90vh;overflow-y:auto;}
+  .modal h3{font-family:var(--serif);margin:0 0 4px;color:var(--navy);}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+  .fb-box{background:#fff;border:1px solid var(--paper-line);padding:12px;font-size:.88rem;margin-top:10px;}
+
+  @media (max-width:760px){
+    .main-shell{flex-direction:column;}
+    .sidebar{width:100%;padding:16px;}
+    .main{padding:20px 16px;}
+    .form-row{flex-direction:column;gap:0;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN / REGISTER ================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>Student Task &amp; Assignment Manager</h1>
+    <p class="tag">Please sign in to continue</p>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tabLogin">Log in</div>
+      <div class="auth-tab" id="tabRegister">Register</div>
+    </div>
+
+    <!-- Login form -->
+    <div id="loginForm">
+      <div class="field"><label for="loginUser">Username</label>
+        <input id="loginUser" type="text" autocomplete="username"></div>
+      <div class="field"><label for="loginPass">Password</label>
+        <input id="loginPass" type="password" autocomplete="current-password"></div>
+      <button class="btn-primary" id="loginBtn">Log in</button>
+    </div>
+
+    <!-- Register form -->
+    <div id="registerForm" style="display:none;">
+      <div class="field"><label for="regName">Full name</label>
+        <input id="regName" type="text" placeholder="e.g. Komal Saxena"></div>
+      <div class="field"><label for="regUser">Username</label>
+        <input id="regUser" type="text" autocomplete="off"></div>
+      <div class="field"><label for="regPass">Password (min 4 characters)</label>
+        <input id="regPass" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="regRole">I am a</label>
+        <select id="regRole"><option value="student">Student</option><option value="teacher">Teacher</option></select></div>
+      <button class="btn-primary" id="registerBtn">Create account</button>
+    </div>
+
+    <div class="auth-msg" id="authMsg"></div>
+
+    <div class="login-hint">
+      <b>Demo accounts</b> (username / password):<br>
+      Student: <b>student</b> / student123 &nbsp;|&nbsp; <b>rohan</b> / student123<br>
+      Teacher: <b>teacher</b> / teacher123<br>
+      Admin: <b>admin</b> / admin123
+    </div>
+  </div>
+</div>
+
+<!-- ================= MAIN APP ================= -->
+<div id="app">
+  <div class="main-shell">
+
+    <nav class="sidebar">
+      <h2>Task Manager</h2>
+      <div class="role-tag" id="sidebarRole"></div>
+
+      <div class="nav-item active" data-view="dashboard"><span>Task Dashboard</span></div>
+      <div class="nav-item" data-view="grades" id="navGrades"><span>My Grades &amp; Feedback</span><span class="nav-badge" id="gradesBadge" style="display:none;"></span></div>
+      <div class="nav-item" data-view="upload" id="navUpload"><span>Upload Assignment</span></div>
+      <div class="nav-item" data-view="submissions" id="navSubmissions"><span>Submissions &amp; Feedback</span><span class="nav-badge" id="subsBadge" style="display:none;"></span></div>
+      <div class="nav-item" data-view="users" id="navUsers"><span>Manage Users</span></div>
+
+      <div class="nav-sep"></div>
+      <div class="logout-link" id="logoutBtn">&larr; Log out</div>
+    </nav>
+
+    <main class="main">
+      <div id="notifyStack"></div>
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard">
+        <header class="page-head">
+          <h1>Task Dashboard</h1>
+          <p id="dashSub"></p>
+        </header>
+
+        <div class="stats" id="statsRow"></div>
+
+        <div class="toolbar">
+          <input id="searchInput" type="text" placeholder="Search assignments...">
+          <select id="filterSelect">
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="submitted">Submitted</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <select id="sortSelect">
+            <option value="dueDate">Sort by due date</option>
+            <option value="priority">Sort by priority</option>
+            <option value="status">Sort by status</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="ledger">
+            <thead id="taskHead"></thead>
+            <tbody id="taskTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- UPLOAD / EDIT ASSIGNMENT -->
+      <section id="view-upload" style="display:none;">
+        <header class="page-head">
+          <h1 id="uploadTitle">Upload Assignment</h1>
+          <p>Create a task for students. It appears on every student's dashboard.</p>
+        </header>
+        <div class="form-card">
+          <div class="field"><label for="taskTitle">Title</label>
+            <input id="taskTitle" type="text" placeholder="e.g. DBMS Unit 2 Assignment"></div>
+          <div class="field"><label for="taskDesc">Description</label>
+            <textarea id="taskDesc" placeholder="What students need to submit"></textarea></div>
+          <div class="form-row">
+            <div class="field"><label for="taskDue">Due date &amp; time</label>
+              <input id="taskDue" type="datetime-local"></div>
+            <div class="field"><label for="taskPriority">Priority</label>
+              <select id="taskPriority">
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select></div>
+          </div>
+          <div class="modal-actions" style="justify-content:flex-start;">
+            <button class="btn-fill" id="createTaskBtn">Add to dashboard</button>
+            <button class="btn-outline" id="cancelEditBtn" style="display:none;">Cancel edit</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUBMISSIONS (teacher/admin) -->
+      <section id="view-submissions" style="display:none;">
+        <header class="page-head">
+          <h1>Submissions &amp; Feedback</h1>
+          <p>See who submitted, who did not, and give a grade or comment.</p>
+        </header>
+        <div id="submissionsList"></div>
+      </section>
+
+      <!-- MY GRADES (student) -->
+      <section id="view-grades" style="display:none;">
+        <header class="page-head">
+          <h1>My Grades &amp; Feedback</h1>
+          <p>Everything you submitted, with your teacher's grade and comments.</p>
+        </header>
+        <div class="table-wrap">
+          <table class="ledger">
+            <thead><tr><th>Assignment</th><th>Submitted</th><th>Status</th><th>Grade</th><th>Feedback</th></tr></thead>
+            <tbody id="gradesBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- USERS (admin) -->
+      <section id="view-users" style="display:none;">
+        <header class="page-head">
+          <h1>Manage Users</h1>
+          <p>Add users, change roles or remove accounts.</p>
+        </header>
+        <div class="form-card" style="max-width:none;margin-bottom:18px;">
+          <div class="form-row">
+            <div class="field"><label for="nuName">Full name</label><input id="nuName" type="text"></div>
+            <div class="field"><label for="nuUser">Username</label><input id="nuUser" type="text"></div>
+            <div class="field"><label for="nuPass">Password</label><input id="nuPass" type="text"></div>
+            <div class="field"><label for="nuRole">Role</label>
+              <select id="nuRole"><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option></select></div>
+          </div>
+          <button class="btn-fill" id="addUserBtn">Add user</button>
+          <button class="btn-outline btn-danger" id="resetBtn" style="margin-left:8px;">Reset all demo data</button>
+        </div>
+        <div class="table-wrap">
+          <table class="ledger">
+            <thead><tr><th>Name</th><th>Username</th><th>Role</th><th></th></tr></thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modalRoot"><div class="modal" id="modalBox"></div></div>
+
+<script>
+/* ================================================================
+   DATA LAYER  (simulated backend using localStorage)
+   Three "tables": users, tasks, subs (submissions).
+   In a real project this would be Node/Express + MySQL.
+   ================================================================ */
+const K = { users:'stam_users_v2', tasks:'stam_tasks_v2', subs:'stam_subs_v2', session:'stam_session_v2' };
+const MAX_FILE = 1.5 * 1024 * 1024; // 1.5 MB per uploaded file
+
+function read(key, fallback){
+  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }
+  catch(e){ return fallback; }
+}
+function write(key, val){
+  try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+  catch(e){ alert('Browser storage is full. Please use a smaller file.'); return false; }
+}
+
+// Very simple password hash (demo only - real apps use bcrypt on the server)
+function hashPass(s){
+  let h1 = 5381, h2 = 52711;
+  for(let i = 0; i < s.length; i++){
+    const c = s.charCodeAt(i);
+    h1 = (h1 * 33) ^ c; h2 = (h2 * 33) ^ c;
+  }
+  return (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16);
+}
+
+function seedData(){
+  const now = Date.now(), H = 3600000;
+  const users = [
+    { id:'u1', name:'Admin User',   username:'admin',   passHash:hashPass('admin123'),   role:'admin' },
+    { id:'u2', name:'Prof. Sharma', username:'teacher', passHash:hashPass('teacher123'), role:'teacher' },
+    { id:'u3', name:'Komal Saxena', username:'student', passHash:hashPass('student123'), role:'student' },
+    { id:'u4', name:'Rohan Verma',  username:'rohan',   passHash:hashPass('student123'), role:'student' }
+  ];
+  const tasks = [
+    { id:'t1', title:'DBMS Unit 3 Assignment', description:'Normalization exercises, Q1-Q10.',
+      dueDate:new Date(now + 20*H).toISOString(), priority:'high', createdBy:'u2', createdAt:new Date(now - 48*H).toISOString() },
+    { id:'t2', title:'Python Mini Project Report', description:'Submit the project report PDF.',
+      dueDate:new Date(now + 70*H).toISOString(), priority:'medium', createdBy:'u2', createdAt:new Date(now - 24*H).toISOString() },
+    { id:'t3', title:'Web Dev Lab File', description:'HTML/CSS lab file, all experiments.',
+      dueDate:new Date(now - 5*H).toISOString(), priority:'low', createdBy:'u2', createdAt:new Date(now - 96*H).toISOString() }
+  ];
+  const subs = [
+    { id:'s1', taskId:'t3', studentId:'u3', studentName:'Komal Saxena', note:'All experiments completed.',
+      fileName:'', fileData:'', submittedAt:new Date(now - 6*H).toISOString(), late:false,
+      feedback:'Good work.', grade:'A', reviewedAt:new Date(now - 2*H).toISOString(), seen:true }
+  ];
+  write(K.users, users); write(K.tasks, tasks); write(K.subs, subs);
+}
+
+if(!localStorage.getItem(K.users)) seedData();
+let users = read(K.users, []);
+let tasks = read(K.tasks, []);
+let subs  = read(K.subs, []);
+let currentUser = null;
+let currentView = 'dashboard';
+let editingTaskId = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fmt = iso => new Date(iso).toLocaleString(undefined, { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+const isStaff = () => currentUser && (currentUser.role === 'teacher' || currentUser.role === 'admin');
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* ================================================================
+   LOGIN / REGISTER
+   ================================================================ */
+function setMsg(text, ok){
+  $('authMsg').style.color = ok ? 'var(--status-done)' : '';
+  $('authMsg').textContent = text;
+}
+function showAuthTab(which){
+  $('tabLogin').classList.toggle('active', which === 'login');
+  $('tabRegister').classList.toggle('active', which === 'register');
+  $('loginForm').style.display = which === 'login' ? 'block' : 'none';
+  $('registerForm').style.display = which === 'register' ? 'block' : 'none';
+  setMsg('');
+}
+$('tabLogin').addEventListener('click', () => showAuthTab('login'));
+$('tabRegister').addEventListener('click', () => showAuthTab('register'));
+
+$('loginBtn').addEventListener('click', () => {
+  const username = $('loginUser').value.trim().toLowerCase();
+  const pass = $('loginPass').value;
+  const u = users.find(x => x.username === username && x.passHash === hashPass(pass));
+  if(!u){ setMsg('Wrong username or password.'); return; }
+  sessionStorage.setItem(K.session, u.id);
+  currentUser = u;
+  enterApp();
+});
+['loginUser','loginPass'].forEach(id => $(id).addEventListener('keydown', e => { if(e.key === 'Enter') $('loginBtn').click(); }));
+
+$('registerBtn').addEventListener('click', () => {
+  const name = $('regName').value.trim();
+  const username = $('regUser').value.trim().toLowerCase();
+  const pass = $('regPass').value;
+  const role = $('regRole').value;
+  if(!name || !username || !pass){ setMsg('Please fill all fields.'); return; }
+  if(pass.length < 4){ setMsg('Password must be at least 4 characters.'); return; }
+  if(users.some(u => u.username === username)){ setMsg('That username is already taken.'); return; }
+  users.push({ id:uid('u'), name, username, passHash:hashPass(pass), role });
+  write(K.users, users);
+  showAuthTab('login');
+  $('loginUser').value = username;
+  $('loginPass').value = '';
+  setMsg('Account created! Please log in.', true);
+});
+
+$('logoutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem(K.session);
+  currentUser = null;
+  closeModal();
+  $('app').style.display = 'none';
+  $('loginScreen').style.display = 'flex';
+  $('loginPass').value = '';
+  $('authMsg').textContent = '';
+});
+
+function enterApp(){
+  $('loginScreen').style.display = 'none';
+  $('app').style.display = 'block';
+  $('sidebarRole').textContent = currentUser.name + ' — ' + cap(currentUser.role);
+
+  // Role-Based Access Control: decide which menu items each role sees
+  const staff = isStaff();
+  $('navUpload').style.display = staff ? 'flex' : 'none';
+  $('navSubmissions').style.display = staff ? 'flex' : 'none';
+  $('navGrades').style.display = currentUser.role === 'student' ? 'flex' : 'none';
+  $('navUsers').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+
+  $('filterSelect').style.display = staff ? 'none' : 'inline-block';
+  showView('dashboard');
+}
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+  item.addEventListener('click', () => {
+    if(item.dataset.view === 'upload') resetTaskForm();
+    showView(item.dataset.view);
+  });
+});
+
+function showView(view){
+  // Role guard: stop people opening pages they should not see
+  const staffOnly = ['upload','submissions'];
+  if(staffOnly.includes(view) && !isStaff()) view = 'dashboard';
+  if(view === 'grades' && currentUser.role !== 'student') view = 'dashboard';
+  if(view === 'users' && currentUser.role !== 'admin') view = 'dashboard';
+
+  currentView = view;
+  document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.toggle('active', i.dataset.view === view));
+  ['dashboard','upload','submissions','grades','users'].forEach(v => {
+    $('view-' + v).style.display = (v === view) ? 'block' : 'none';
+  });
+  renderAll();
+}
+
+function renderAll(){
+  renderNotifications();
+  renderBadges();
+  if(currentView === 'dashboard') renderDashboard();
+  if(currentView === 'submissions') renderSubmissions();
+  if(currentView === 'grades') renderGrades();
+  if(currentView === 'users') renderUsers();
+}
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
+function visibleTasks(){
+  // Students see every task. Teachers see their own. Admin sees all.
+  if(currentUser.role === 'teacher') return tasks.filter(t => t.createdBy === currentUser.id);
+  return tasks;
+}
+function mySub(taskId){ return subs.find(s => s.taskId === taskId && s.studentId === currentUser.id); }
+
+// Status of a task for the logged-in student
+function studentStatus(t){
+  const s = mySub(t.id);
+  if(s) return s.reviewedAt ? 'reviewed' : 'submitted';
+  return new Date(t.dueDate) < new Date() ? 'overdue' : 'pending';
+}
+
+/* ================================================================
+   NOTIFICATIONS  (24h / 1h / overdue + feedback alerts)
+   ================================================================ */
+function notifyEl(cls, html){
+  const d = document.createElement('div');
+  d.className = 'notify ' + cls;
+  d.innerHTML = html;
+  return d;
+}
+function renderNotifications(){
+  const stack = $('notifyStack');
+  stack.innerHTML = '';
+  if(!currentUser) return;
+  const now = Date.now();
+
+  if(currentUser.role === 'student'){
+    tasks.forEach(t => {
+      if(mySub(t.id)) return;
+      const hrs = (new Date(t.dueDate) - now) / 3600000;
+      if(hrs <= 0)       stack.appendChild(notifyEl('urgent', `<b>${esc(t.title)}</b> is overdue.`));
+      else if(hrs <= 1)  stack.appendChild(notifyEl('urgent', `<b>${esc(t.title)}</b> is due in under 1 hour.`));
+      else if(hrs <= 24) stack.appendChild(notifyEl('', `<b>${esc(t.title)}</b> is due within 24 hours.`));
+    });
+    subs.filter(s => s.studentId === currentUser.id && s.reviewedAt && !s.seen).forEach(s => {
+      const t = tasks.find(x => x.id === s.taskId);
+      stack.appendChild(notifyEl('info', `New feedback on <b>${esc(t ? t.title : 'an assignment')}</b>${s.grade ? ' — grade ' + esc(s.grade) : ''}.`));
+    });
+  } else {
+    const ids = visibleTasks().map(t => t.id);
+    const waiting = subs.filter(s => ids.includes(s.taskId) && !s.reviewedAt).length;
+    if(waiting > 0) stack.appendChild(notifyEl('info', `<b>${waiting}</b> submission${waiting > 1 ? 's are' : ' is'} waiting for your review.`));
+  }
+}
+function renderBadges(){
+  const gb = $('gradesBadge'), sb = $('subsBadge');
+  gb.style.display = sb.style.display = 'none';
+  if(currentUser.role === 'student'){
+    const n = subs.filter(s => s.studentId === currentUser.id && s.reviewedAt && !s.seen).length;
+    if(n){ gb.textContent = n; gb.style.display = 'inline-block'; }
+  } else {
+    const ids = visibleTasks().map(t => t.id);
+    const n = subs.filter(s => ids.includes(s.taskId) && !s.reviewedAt).length;
+    if(n){ sb.textContent = n; sb.style.display = 'inline-block'; }
+  }
+}
+
+/* ================================================================
+   DASHBOARD  (search + filter + sorting logic)
+   ================================================================ */
+const PRIORITY_RANK = { high:0, medium:1, low:2 };
+const STATUS_RANK = { overdue:0, pending:1, submitted:2, reviewed:3 };
+['sortSelect','filterSelect'].forEach(id => $(id).addEventListener('change', renderDashboard));
+$('searchInput').addEventListener('input', renderDashboard);
+
+function renderStats(list){
+  const stats = [];
+  if(currentUser.role === 'student'){
+    const c = k => list.filter(t => studentStatus(t) === k).length;
+    stats.push(['Total', list.length], ['Pending', c('pending')], ['Submitted', c('submitted')], ['Reviewed', c('reviewed')], ['Overdue', c('overdue')]);
+  } else {
+    const ids = list.map(t => t.id);
+    const mine = subs.filter(s => ids.includes(s.taskId));
+    stats.push(['Assignments', list.length], ['Submissions', mine.length], ['Awaiting review', mine.filter(s => !s.reviewedAt).length], ['Reviewed', mine.filter(s => s.reviewedAt).length]);
+  }
+  $('statsRow').innerHTML = stats.map(s => `<div class="stat"><div class="num">${s[1]}</div><div class="lbl">${s[0]}</div></div>`).join('');
+}
+
+function renderDashboard(){
+  const student = currentUser.role === 'student';
+  $('dashSub').textContent = student
+    ? 'All assignments in one place. Submit before the deadline.'
+    : 'Assignments you manage. Edit, delete or open submissions.';
+
+  const base = visibleTasks();
+  renderStats(base);
+
+  $('taskHead').innerHTML = student
+    ? '<tr><th>Assignment</th><th>Due</th><th>Priority</th><th>Status</th><th></th></tr>'
+    : '<tr><th>Assignment</th><th>Due</th><th>Priority</th><th>Submissions</th><th></th></tr>';
+
+  const q = $('searchInput').value.trim().toLowerCase();
+  const filter = $('filterSelect').value;
+  const key = $('sortSelect').value;
+
+  let list = base.filter(t => !q || t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
+  if(student && filter !== 'all') list = list.filter(t => studentStatus(t) === filter);
+
+  list.sort((a, b) => {
+    if(key === 'dueDate')  return new Date(a.dueDate) - new Date(b.dueDate);
+    if(key === 'priority') return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+    if(key === 'status')
+      return student ? STATUS_RANK[studentStatus(a)] - STATUS_RANK[studentStatus(b)]
+                     : subs.filter(s => s.taskId === b.id).length - subs.filter(s => s.taskId === a.id).length;
+    return 0;
+  });
+
+  const body = $('taskTableBody');
+  if(list.length === 0){
+    body.innerHTML = `<tr><td colspan="5"><div class="empty-state">${base.length ? 'No assignments match your search/filter.' : 'No assignments yet.'}</div></td></tr>`;
+    return;
+  }
+
+  body.innerHTML = list.map(t => {
+    const head = `
+      <td><div class="task-title">${esc(t.title)}</div>
+          <div class="task-desc">${esc(t.description)}</div></td>
+      <td>${fmt(t.dueDate)}</td>
+      <td><span class="pill pill-${t.priority}">${cap(t.priority)}</span></td>`;
+    if(student){
+      const st = studentStatus(t), s = mySub(t.id);
+      let act = '';
+      if(st === 'pending' || st === 'overdue') act = `<button class="btn-outline" data-action="submit" data-id="${t.id}">Submit</button>`;
+      else if(st === 'submitted') act = `<button class="btn-outline" data-action="submit" data-id="${t.id}">Edit submission</button>`;
+      else act = `<button class="btn-outline" data-action="feedback" data-id="${t.id}">View feedback</button>`;
+      const late = s && s.late ? '<span class="pill pill-late">Late</span>' : '';
+      return `<tr>${head}<td><span class="pill pill-${st}">${cap(st)}</span>${late}</td><td>${act}</td></tr>`;
+    }
+    const total = subs.filter(s => s.taskId === t.id).length;
+    const pend = subs.filter(s => s.taskId === t.id && !s.reviewedAt).length;
+    const by = currentUser.role === 'admin' ? `<div class="task-desc">By ${esc((users.find(u => u.id === t.createdBy) || {}).name || 'Unknown')}</div>` : '';
+    return `<tr>${head.replace('</td>', by + '</td>')}
+      <td>${total} submitted${pend ? `<div class="task-desc">${pend} to review</div>` : ''}</td>
+      <td><div class="actions">
+        <button class="btn-outline" data-action="review" data-id="${t.id}">Review</button>
+        <button class="btn-outline" data-action="edit" data-id="${t.id}">Edit</button>
+        <button class="btn-outline btn-danger" data-action="delete" data-id="${t.id}">Delete</button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+/* ================================================================
+   STUDENT: SUBMIT ASSIGNMENT (with optional file)
+   ================================================================ */
+function openSubmitModal(taskId){
+  const t = tasks.find(x => x.id === taskId); if(!t) return;
+  const s = mySub(taskId);
+  const overdue = new Date(t.dueDate) < new Date();
+  $('modalBox').innerHTML = `
+    <h3>${esc(t.title)}</h3>
+    <p class="meta">Due ${fmt(t.dueDate)}${overdue ? ' — <b style="color:var(--priority-high)">deadline passed, this will be marked Late</b>' : ''}</p>
+    <div class="field"><label for="subNote">Note to teacher (optional)</label>
+      <textarea id="subNote" placeholder="Anything you want to tell your teacher">${esc(s ? s.note : '')}</textarea></div>
+    <div class="field"><label for="subFile">Attach file (optional, max 1.5 MB)</label>
+      <input id="subFile" type="file">
+      ${s && s.fileName ? `<div class="task-desc">Current file: ${esc(s.fileName)} (leave empty to keep it)</div>` : ''}</div>
+    <div class="modal-actions">
+      <button class="btn-outline" data-action="close">Cancel</button>
+      <button class="btn-fill" data-action="confirm-submit" data-id="${t.id}">${s ? 'Update submission' : 'Submit assignment'}</button>
+    </div>`;
+  openModal();
+}
+
+function confirmSubmit(taskId){
+  const t = tasks.find(x => x.id === taskId); if(!t) return;
+  const note = $('subNote').value.trim();
+  const file = $('subFile').files[0];
+
+  const finish = (fileName, fileData) => {
+    const backup = JSON.stringify(subs);
+    let s = mySub(taskId);
+    const late = new Date() > new Date(t.dueDate);
+    if(s){
+      s.note = note; s.submittedAt = new Date().toISOString(); s.late = late;
+      if(fileName){ s.fileName = fileName; s.fileData = fileData; }
+    } else {
+      subs.push({ id:uid('s'), taskId, studentId:currentUser.id, studentName:currentUser.name, note,
+        fileName:fileName || '', fileData:fileData || '', submittedAt:new Date().toISOString(), late,
+        feedback:'', grade:'', reviewedAt:null, seen:false });
+    }
+    if(!write(K.subs, subs)){ subs = JSON.parse(backup); return; }
+    closeModal();
+    renderAll();
+  };
+
+  if(file){
+    if(file.size > MAX_FILE){ alert('File is too big. Please choose a file under 1.5 MB.'); return; }
+    const r = new FileReader();
+    r.onload = () => finish(file.name, r.result);
+    r.onerror = () => alert('Could not read the file.');
+    r.readAsDataURL(file);
+  } else finish('', '');
+}
+
+function openFeedbackModal(taskId){
+  const t = tasks.find(x => x.id === taskId), s = mySub(taskId);
+  if(!t || !s) return;
+  s.seen = true; write(K.subs, subs);
+  $('modalBox').innerHTML = `
+    <h3>${esc(t.title)}</h3>
+    <p class="meta">Submitted ${fmt(s.submittedAt)}${s.late ? ' (late)' : ''}</p>
+    <div class="fb-box"><b>Grade:</b> ${esc(s.grade) || '—'}<br><br><b>Feedback:</b><br>${esc(s.feedback) || 'No comment given.'}</div>
+    <div class="modal-actions"><button class="btn-fill" data-action="close">Close</button></div>`;
+  openModal();
+  renderAll();
+}
+
+/* ================================================================
+   STUDENT: MY GRADES
+   ================================================================ */
+function renderGrades(){
+  const mine = subs.filter(s => s.studentId === currentUser.id).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  const body = $('gradesBody');
+  if(!mine.length){ body.innerHTML = `<tr><td colspan="5"><div class="empty-state">You have not submitted anything yet.</div></td></tr>`; return; }
+  body.innerHTML = mine.map(s => {
+    const t = tasks.find(x => x.id === s.taskId);
+    const st = s.reviewedAt ? 'reviewed' : 'submitted';
+    return `<tr>
+      <td><div class="task-title">${esc(t ? t.title : '(deleted assignment)')}</div></td>
+      <td>${fmt(s.submittedAt)}${s.late ? '<span class="pill pill-late">Late</span>' : ''}</td>
+      <td><span class="pill pill-${st}">${cap(st)}</span></td>
+      <td><b>${esc(s.grade) || '—'}</b></td>
+      <td>${esc(s.feedback) || '<span class="task-desc">Waiting for feedback</span>'}</td></tr>`;
+  }).join('');
+  // Opening this page marks feedback as seen
+  let changed = false;
+  mine.forEach(s => { if(s.reviewedAt && !s.seen){ s.seen = true; changed = true; } });
+  if(changed){ write(K.subs, subs); renderNotifications(); renderBadges(); }
+}
+
+/* ================================================================
+   TEACHER / ADMIN: CREATE, EDIT, DELETE ASSIGNMENT
+   ================================================================ */
+function toLocalInput(iso){
+  const d = new Date(iso);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+function resetTaskForm(){
+  editingTaskId = null;
+  $('taskTitle').value = ''; $('taskDesc').value = ''; $('taskDue').value = ''; $('taskPriority').value = 'medium';
+  $('uploadTitle').textContent = 'Upload Assignment';
+  $('createTaskBtn').textContent = 'Add to dashboard';
+  $('cancelEditBtn').style.display = 'none';
+}
+function startEdit(id){
+  const t = tasks.find(x => x.id === id); if(!t) return;
+  editingTaskId = id;
+  $('taskTitle').value = t.title; $('taskDesc').value = t.description;
+  $('taskDue').value = toLocalInput(t.dueDate); $('taskPriority').value = t.priority;
+  $('uploadTitle').textContent = 'Edit Assignment';
+  $('createTaskBtn').textContent = 'Save changes';
+  $('cancelEditBtn').style.display = 'inline-block';
+  showView('upload');
+}
+$('cancelEditBtn').addEventListener('click', () => { resetTaskForm(); showView('dashboard'); });
+
+$('createTaskBtn').addEventListener('click', () => {
+  const title = $('taskTitle').value.trim();
+  const description = $('taskDesc').value.trim();
+  const due = $('taskDue').value;
+  const priority = $('taskPriority').value;
+  if(!title || !due){ alert('Please enter a title and a due date.'); return; }
+
+  if(editingTaskId){
+    const t = tasks.find(x => x.id === editingTaskId);
+    if(t){ t.title = title; t.description = description; t.dueDate = new Date(due).toISOString(); t.priority = priority; }
+  } else {
+    tasks.push({ id:uid('t'), title, description, dueDate:new Date(due).toISOString(), priority,
+      createdBy:currentUser.id, createdAt:new Date().toISOString() });
+  }
+  write(K.tasks, tasks);
+  resetTaskForm();
+  showView('dashboard');
+});
+
+function deleteTask(id){
+  const t = tasks.find(x => x.id === id); if(!t) return;
+  if(!confirm('Delete "' + t.title + '" and all its submissions?')) return;
+  tasks = tasks.filter(x => x.id !== id);
+  subs = subs.filter(s => s.taskId !== id);
+  write(K.tasks, tasks); write(K.subs, subs);
+  renderAll();
+}
+
+/* ================================================================
+   TEACHER / ADMIN: SUBMISSIONS & FEEDBACK
+   ================================================================ */
+function renderSubmissions(){
+  const wrap = $('submissionsList');
+  const list = [...visibleTasks()].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  if(!list.length){ wrap.innerHTML = '<div class="empty-state">No assignments yet.</div>'; return; }
+  const students = users.filter(u => u.role === 'student');
+
+  wrap.innerHTML = list.map(t => {
+    const ts = subs.filter(s => s.taskId === t.id);
+    const missing = students.filter(st => !ts.some(s => s.studentId === st.id));
+    const cards = ts.length ? ts.map(s => `
+      <div class="sub-card">
+        <div class="who">${esc(s.studentName)}
+          <span class="pill pill-${s.reviewedAt ? 'reviewed' : 'submitted'}" style="margin-left:6px;">${s.reviewedAt ? 'Reviewed' : 'Awaiting review'}</span>
+          ${s.late ? '<span class="pill pill-late">Late</span>' : ''}</div>
+        <div class="meta" style="margin:2px 0 0;">Submitted ${fmt(s.submittedAt)}</div>
+        ${s.note ? `<div class="sub-note">${esc(s.note)}</div>` : ''}
+        ${s.fileData ? `<a class="file-link" href="${s.fileData}" download="${esc(s.fileName)}">Download: ${esc(s.fileName)}</a>` : ''}
+        <div class="form-row" style="margin-top:10px;">
+          <div class="field"><label>Feedback</label>
+            <input type="text" id="fb-${s.id}" value="${esc(s.feedback)}" placeholder="Comment for the student"></div>
+          <div class="field" style="max-width:100px;"><label>Grade</label>
+            <input type="text" id="gr-${s.id}" value="${esc(s.grade)}" placeholder="A"></div>
+        </div>
+        <button class="btn-outline" data-action="save-fb" data-id="${s.id}">Save feedback</button>
+      </div>`).join('') : '<div class="empty-state">No submissions yet.</div>';
+
+    return `<div class="panel" id="panel-${t.id}">
+      <h3>${esc(t.title)}</h3>
+      <p class="meta">Due ${fmt(t.dueDate)} &middot; ${ts.length} of ${students.length} students submitted</p>
+      ${cards}
+      ${missing.length ? `<p class="missing"><b>Not submitted yet:</b> ${missing.map(m => esc(m.name)).join(', ')}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function saveFeedback(subId){
+  const s = subs.find(x => x.id === subId); if(!s) return;
+  const feedback = $('fb-' + subId).value.trim();
+  const grade = $('gr-' + subId).value.trim();
+  if(!feedback && !grade){ alert('Please enter a grade or a comment.'); return; }
+  s.feedback = feedback; s.grade = grade;
+  s.reviewedAt = new Date().toISOString();
+  s.seen = false; // student gets a new-feedback alert
+  write(K.subs, subs);
+  const y = window.scrollY;
+  renderAll();
+  window.scrollTo(0, y);
+}
+
+/* ================================================================
+   ADMIN: MANAGE USERS
+   ================================================================ */
+function renderUsers(){
+  $('usersBody').innerHTML = users.map(u => {
+    const me = u.id === currentUser.id;
+    return `<tr>
+      <td>${esc(u.name)}${me ? ' <span class="task-desc">(you)</span>' : ''}</td>
+      <td>${esc(u.username)}</td>
+      <td>${me ? cap(u.role) : `<select data-action="role" data-id="${u.id}">
+          ${['student','teacher','admin'].map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${cap(r)}</option>`).join('')}</select>`}</td>
+      <td>${me ? '' : `<button class="btn-outline btn-danger" data-action="del-user" data-id="${u.id}">Delete</button>`}</td></tr>`;
+  }).join('');
+}
+$('addUserBtn').addEventListener('click', () => {
+  const name = $('nuName').value.trim(), username = $('nuUser').value.trim().toLowerCase(), pass = $('nuPass').value;
+  if(!name || !username || pass.length < 4){ alert('Enter name, username and a password of at least 4 characters.'); return; }
+  if(users.some(u => u.username === username)){ alert('That username already exists.'); return; }
+  users.push({ id:uid('u'), name, username, passHash:hashPass(pass), role:$('nuRole').value });
+  write(K.users, users);
+  ['nuName','nuUser','nuPass'].forEach(i => $(i).value = '');
+  renderUsers();
+});
+function deleteUser(id){
+  const u = users.find(x => x.id === id); if(!u || id === currentUser.id) return;
+  if(!confirm('Delete user "' + u.name + '"?')) return;
+  users = users.filter(x => x.id !== id);
+  subs = subs.filter(s => s.studentId !== id);
+  write(K.users, users); write(K.subs, subs);
+  renderUsers();
+}
+$('resetBtn').addEventListener('click', () => {
+  if(!confirm('This deletes ALL data and restores the demo data. Continue?')) return;
+  sessionStorage.removeItem(K.session);
+  seedData();
+  location.reload();
+});
+
+/* ================================================================
+   MODAL + GLOBAL CLICK HANDLER
+   ================================================================ */
+function openModal(){ $('modalRoot').style.display = 'flex'; }
+function closeModal(){ $('modalRoot').style.display = 'none'; $('modalBox').innerHTML = ''; }
+$('modalRoot').addEventListener('click', e => { if(e.target === $('modalRoot')) closeModal(); });
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if(!el || el.tagName === 'SELECT') return;
+  const id = el.dataset.id;
+  switch(el.dataset.action){
+    case 'submit':         openSubmitModal(id); break;
+    case 'confirm-submit': confirmSubmit(id); break;
+    case 'feedback':       openFeedbackModal(id); break;
+    case 'close':          closeModal(); break;
+    case 'edit':           startEdit(id); break;
+    case 'delete':         deleteTask(id); break;
+    case 'review':         showView('submissions'); setTimeout(() => { const p = $('panel-' + id); if(p) p.scrollIntoView({behavior:'smooth'}); }, 50); break;
+    case 'save-fb':        saveFeedback(id); break;
+    case 'del-user':       deleteUser(id); break;
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(el.dataset && el.dataset.action === 'role'){
+    const u = users.find(x => x.id === el.dataset.id);
+    if(u){ u.role = el.value; write(K.users, users); }
+  }
+});
+
+/* ================================================================
+   STARTUP: restore session + refresh reminders every minute
+   ================================================================ */
+(function init(){
+  const sid = sessionStorage.getItem(K.session);
+  const u = users.find(x => x.id === sid);
+  if(u){ currentUser = u; enterApp(); }
+  setInterval(() => {
+    if(!currentUser) return;
+    renderNotifications(); renderBadges();
+    if(currentView === 'dashboard' && $('modalRoot').style.display !== 'flex') renderDashboard();
+  }, 60000);
+})();
+</script>
+</body>
+</html>
